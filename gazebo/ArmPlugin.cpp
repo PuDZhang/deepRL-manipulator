@@ -6,18 +6,19 @@
 
 #include "ArmPlugin.h"
 #include "PropPlugin.h"
-#include "deepRL.h"
+#include "deepRL.h" //Including the Deep RL framework
 
 #include "cudaMappedMemory.h"
 #include "cudaPlanar.h"
 
 #define PI 3.141592653589793238462643383279502884197169f
+#define NUM_ACTIONS 3  //Default value set
 
 #define JOINT_MIN	-0.75f
 #define JOINT_MAX	 2.0f
 
 // Turn on velocity based control
-#define VELOCITY_CONTROL false
+#define VELOCITY_CONTROL true //If false then uses position based control of joint
 #define VELOCITY_MIN -0.2f
 #define VELOCITY_MAX  0.2f
 
@@ -173,7 +174,6 @@ bool ArmPlugin::createAgent()
 }
 
 
-
 // onCameraMsg
 void ArmPlugin::onCameraMsg(ConstImageStampedPtr &_msg)
 {
@@ -184,7 +184,7 @@ void ArmPlugin::onCameraMsg(ConstImageStampedPtr &_msg)
 	// check the validity of the message contents
 	if( !_msg )
 	{
-		printf("ArmPlugin - recieved NULL message\n");
+		printf("ArmPlugin - received NULL message\n");
 		return;
 	}
 
@@ -220,7 +220,6 @@ void ArmPlugin::onCameraMsg(ConstImageStampedPtr &_msg)
 	newState = true;
 
 	if(DEBUG){printf("camera %i x %i  %i bpp  %i bytes\n", width, height, bpp, size);}
-
 }
 
 
@@ -246,7 +245,6 @@ void ArmPlugin::onCollisionMsg(ConstContactsPtr &contacts)
 		if (collisionCheck)
 		{
 			rewardHistory = None;
-
 			newReward  = 1.0f;
 			endEpisode = None;
 
@@ -289,20 +287,16 @@ bool ArmPlugin::updateAgent()
 	if(DEBUG){printf("ArmPlugin - agent selected action %i\n", action);}
 
 
-
 #if VELOCITY_CONTROL
-	// if the action is even, increase the joint position by the delta parameter
-	// if the action is odd,  decrease the joint position by the delta parameter
+  // Increase or decrease the joint velocity based on whether the action is even or odd
+	float velocity = 0.0;
+	if(action%2 ==0)
+     velocity += 0.5;
+	else
+	   velocity -= 0.5;
 
-
-	/*
-	/ TODO - Increase or decrease the joint velocity based on whether the action is even or odd
-	/
-	*/
-
-	float velocity = 0.0; // TODO - Set joint velocity based on whether action is even or odd.
-
-	if( velocity < VELOCITY_MIN )
+ //Making sure that the velocity is within the bounds of the defined range
+ if( velocity < VELOCITY_MIN )
 		velocity = VELOCITY_MIN;
 
 	if( velocity > VELOCITY_MAX )
@@ -325,13 +319,16 @@ bool ArmPlugin::updateAgent()
 			vel[n] = 0.0f;
 		}
 	}
-#else
 
-	/*
-	/ TODO - Increase or decrease the joint position based on whether the action is even or odd
-	/
-	*/
-	float joint = 0.0; // TODO - Set joint position based on whether action is even or odd.
+#else //In this script, the velocity control method is used, however the joint position control method can be used as well
+
+	// Increase or decrease the joint velocity based on whether the action is even or odd
+	float joint = 0.0;
+
+	if(action%2 ==0)
+		 joint += 0.5;
+	else
+		 joint -= 0.5;
 
 	// limit the joint to the specified range
 	if( joint < JOINT_MIN )
