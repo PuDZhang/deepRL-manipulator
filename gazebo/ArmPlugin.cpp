@@ -1,7 +1,6 @@
 /*
  * Author - Dustin Franklin (Nvidia Jetson Developer)
  * Modified by - Sahil Juneja, Kyle Stewart-Frantz, Vijayasri Iyer
- *
  */
 
 #include "ArmPlugin.h"
@@ -240,13 +239,12 @@ void ArmPlugin::onCollisionMsg(ConstContactsPtr &contacts)
 			     << "] and [" << contacts->contact(i).collision2() << "]\n";}
 
 
-		// TODO - Check if there is collision between the arm and object, then issue learning reward
-
-		if (collisionCheck)
+		// Check if there is collision between the arm and object, then issue learning reward
+    if (collisionCheck)
 		{
-			rewardHistory = None;
-			newReward  = 1.0f;
-			endEpisode = None;
+			rewardHistory = 1.0f;
+			newReward  = true;
+			endEpisode = false;
 
 			return;
 		}
@@ -287,10 +285,10 @@ bool ArmPlugin::updateAgent()
 	if(DEBUG){printf("ArmPlugin - agent selected action %i\n", action);}
 
 
-#if VELOCITY_CONTROL
+#if VELOCITY_CONTROL //DOUBT : ASK IF THIS IS DONE CORRECTLY
   // Increase or decrease the joint velocity based on whether the action is even or odd
 	float velocity = 0.0;
-	if(action%2 ==0)
+	if(action%2 == 0)
      velocity += 0.5;
 	else
 	   velocity -= 0.5;
@@ -325,7 +323,7 @@ bool ArmPlugin::updateAgent()
 	// Increase or decrease the joint velocity based on whether the action is even or odd
 	float joint = 0.0;
 
-	if(action%2 ==0)
+	if(action%2 == 0)
 		 joint += 0.5;
 	else
 		 joint -= 0.5;
@@ -547,27 +545,18 @@ void ArmPlugin::OnUpdate(const common::UpdateInfo& updateInfo)
 		const math::Box& gripBBox = gripper->GetBoundingBox();
 		const float groundContact = 0.05f;
 
-		/*
-		/ TODO - set appropriate Reward for robot hitting the ground.
-		/
-		*/
-
-
-		/*if(checkGroundContact)
+		// Robot gets a negative reward for touching the ground
+  	if(checkGroundContact)
 		{
+      if(DEBUG){printf("GROUND CONTACT, EOE\n");}
 
-			if(DEBUG){printf("GROUND CONTACT, EOE\n");}
-
-			rewardHistory = None;
-			newReward     = None;
-			endEpisode    = None;
+			rewardHistory = -1.0f;
+			newReward     = true;
+			endEpisode    = true;
 		}
-		*/
 
-		/*
-		/ TODO - Issue an interim reward based on the distance to the object
-		/
-		*/
+
+		// TODO - Issue an interim reward based on the distance to the object
 
 		/*
 		if(!checkGroundContact)
