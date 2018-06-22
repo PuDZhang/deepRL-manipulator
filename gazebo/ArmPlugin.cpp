@@ -11,7 +11,7 @@
 #include "cudaPlanar.h"
 
 #define PI 3.141592653589793238462643383279502884197169f
-#define NUM_ACTIONS 3  //Default value set
+#define NUM_ACTIONS 6  //Two possible actions for each joint of 3dof arm, (move up/increase velocity)/(move down/decrease velocity)
 
 #define JOINT_MIN	-0.75f
 #define JOINT_MAX	 2.0f
@@ -130,14 +130,14 @@ void ArmPlugin::Load(physics::ModelPtr _parent, sdf::ElementPtr /*_sdf*/)
 	// Create our node for camera communication
 	cameraNode->Init();
 
-  // TODO - Subscribe to camera topic
-  gazebo::transport::SubscriberPtr cameraSub = cameraNode->Subscribe("/gazebo/arm_world/camera/link/camera/image", ArmPlugin::onCameraMsg, this);
+  // Subscriber type defined in header file. Points to messages with the camera images.
+  cameraSub = cameraNode->Subscribe("/gazebo/arm_world/camera/link/camera/image", &ArmPlugin::onCameraMsg, this);
 
 	// Create our node for collision detection
 	collisionNode->Init();
 
-	// TODO - Subscribe to prop collision topic
-  gazebo::transport::SubscriberPtr collisionSub = collisionNode->Subscribe("/gazebo/arm_world/tube/tube_link/my_contact", ArmPlugin::onCollisionMsg, this);
+	// Points to the messages from the collision (my_contact) topic
+  collisionSub = collisionNode->Subscribe("/gazebo/arm_world/tube/tube_link/my_contact", &ArmPlugin::onCollisionMsg, this);
 
 	// Listen to the update event. This event is broadcast every simulation iteration.
 	this->updateConnection = event::Events::ConnectWorldUpdateBegin(boost::bind(&ArmPlugin::OnUpdate, this, _1));
@@ -150,8 +150,7 @@ bool ArmPlugin::createAgent()
 	if( agent != NULL )
 		return true;
 
-
-	// TODO - Create DQN Agent
+  // Create DQN Agent
   agent = dqnAgent::Create(INPUT_WIDTH, INPUT_HEIGHT, INPUT_CHANNELS, NUM_ACTIONS, OPTIMIZER, LEARNING_RATE, REPLAY_MEMORY, BATCH_SIZE, GAMMA, EPS_START, EPS_END, EPS_DECAY, USE_LSTM, LSTM_SIZE, ALLOW_RANDOM, DEBUG);
 
   if( !agent )
@@ -240,14 +239,14 @@ void ArmPlugin::onCollisionMsg(ConstContactsPtr &contacts)
 
 
 		// Check if there is collision between the arm and object, then issue learning reward
-    if (collisionCheck)
+    /*if (collisionCheck)
 		{
 			rewardHistory = 1.0f;
 			newReward  = true;
 			endEpisode = false;
 
 			return;
-		}
+		}*/
 
 	}
 }
@@ -546,14 +545,14 @@ void ArmPlugin::OnUpdate(const common::UpdateInfo& updateInfo)
 		const float groundContact = 0.05f;
 
 		// Robot gets a negative reward for touching the ground
-  	if(checkGroundContact)
+  	/*if(checkGroundContact)
 		{
       if(DEBUG){printf("GROUND CONTACT, EOE\n");}
 
 			rewardHistory = -1.0f;
 			newReward     = true;
 			endEpisode    = true;
-		}
+		}*/
 
 
 		// TODO - Issue an interim reward based on the distance to the object
