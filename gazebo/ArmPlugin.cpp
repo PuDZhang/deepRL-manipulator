@@ -32,12 +32,12 @@
 #define EPS_DECAY 200
 
 
-// TODO - Tune the following hyperparameters
+//Hyperparameter tuning
 
 #define INPUT_WIDTH   512
 #define INPUT_HEIGHT  512
-#define OPTIMIZER "None"
-#define LEARNING_RATE 0.05f
+#define OPTIMIZER "RMSprop"
+#define LEARNING_RATE 0.1
 #define REPLAY_MEMORY 10000
 #define BATCH_SIZE 8
 #define USE_LSTM false
