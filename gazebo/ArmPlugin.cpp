@@ -3,6 +3,8 @@
  * Modified by - Sahil Juneja, Kyle Stewart-Frantz, Vijayasri Iyer
  */
 
+ //define checkGroundContact and collisionCheck
+
 #include "ArmPlugin.h"
 #include "PropPlugin.h"
 #include "deepRL.h" //Including the Deep RL framework
@@ -55,9 +57,9 @@
 #define GRIP_NAME  "gripper_middle"
 
 // Define Collision Parameters
-#define COLLISION_FILTER "ground_plane::link::collision"
-#define COLLISION_ITEM   "tube::tube_link::tube_collision"
-#define COLLISION_POINT  "arm::gripperbase::gripper_link"
+#define COLLISION_FILTER "ground_plane::link::collision" //Collision element of the ground plane
+#define COLLISION_ITEM   "tube::tube_link::tube_collision" //Collision element of the object(tube)
+#define COLLISION_POINT  "arm::gripperbase::gripper_link" //Collision element of the gripper i.e where the gripper should touch objects
 
 // Animation Steps
 #define ANIMATION_STEPS 1000
@@ -118,7 +120,7 @@ ArmPlugin::ArmPlugin() : ModelPlugin(), cameraNode(new gazebo::transport::Node()
 }
 
 
-// Load
+// Load/Initialization
 void ArmPlugin::Load(physics::ModelPtr _parent, sdf::ElementPtr /*_sdf*/)
 {
 	printf("ArmPlugin::Load('%s')\n", _parent->GetName().c_str());
@@ -172,7 +174,7 @@ bool ArmPlugin::createAgent()
 }
 
 
-// onCameraMsg
+// Define actions to take on receiving a message from the camera topic
 void ArmPlugin::onCameraMsg(ConstImageStampedPtr &_msg)
 {
 	// don't process the image if the agent hasn't been created yet
@@ -221,7 +223,7 @@ void ArmPlugin::onCameraMsg(ConstImageStampedPtr &_msg)
 }
 
 
-// onCollisionMsg
+// Define actions to take on receiving a message from the collision topic
 void ArmPlugin::onCollisionMsg(ConstContactsPtr &contacts)
 {
 	//if(DEBUG){printf("collision callback (%u contacts)\n", contacts->contact_size());}
@@ -231,22 +233,23 @@ void ArmPlugin::onCollisionMsg(ConstContactsPtr &contacts)
 
 	for (unsigned int i = 0; i < contacts->contact_size(); ++i)
 	{
+		bool collisionCheck;
 		if( strcmp(contacts->contact(i).collision2().c_str(), COLLISION_FILTER) == 0 )
-			continue;
+		  collisionCheck = true;
+			//continue;
 
 		if(DEBUG){std::cout << "Collision between[" << contacts->contact(i).collision1()
 			     << "] and [" << contacts->contact(i).collision2() << "]\n";}
 
-
-		// Check if there is collision between the arm and object, then issue learning reward
-    /*if (collisionCheck)
+    // Check if there is collision between the arm and object, then issue learning reward
+    if (collisionCheck)
 		{
 			rewardHistory = 1.0f;
 			newReward  = true;
 			endEpisode = false;
 
 			return;
-		}*/
+		}
 
 	}
 }
@@ -544,15 +547,21 @@ void ArmPlugin::OnUpdate(const common::UpdateInfo& updateInfo)
 		const math::Box& gripBBox = gripper->GetBoundingBox();
 		const float groundContact = 0.05f;
 
+    // Checking contact between arm and ground
+		bool checkGroundContact;
+		if( strcmp(gripBBox, COLLISION_FILTER) <= groundContact )
+		  checkGroundContact = true;
+
+
 		// Robot gets a negative reward for touching the ground
-  	/*if(checkGroundContact)
+		if(checkGroundContact)
 		{
       if(DEBUG){printf("GROUND CONTACT, EOE\n");}
 
 			rewardHistory = -1.0f;
 			newReward     = true;
 			endEpisode    = true;
-		}*/
+		}
 
 
 		// TODO - Issue an interim reward based on the distance to the object
