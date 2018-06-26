@@ -234,7 +234,7 @@ void ArmPlugin::onCollisionMsg(ConstContactsPtr &contacts)
 	for (unsigned int i = 0; i < contacts->contact_size(); ++i)
 	{
 		bool collisionCheck;
-		if( strcmp(contacts->contact(i).collision2().c_str(), COLLISION_FILTER) == 0 )
+		if( strcmp(contacts->contact(i).collision2().c_str(), COLLISION_ITEM) == 0 )
 		  collisionCheck = true;
 			//continue;
 
@@ -244,7 +244,7 @@ void ArmPlugin::onCollisionMsg(ConstContactsPtr &contacts)
     // Check if there is collision between the arm and object, then issue learning reward
     if (collisionCheck)
 		{
-			rewardHistory = 1.0f;
+			rewardHistory = REWARD_WIN;
 			newReward  = true;
 			endEpisode = false;
 
@@ -287,8 +287,9 @@ bool ArmPlugin::updateAgent()
 	if(DEBUG){printf("ArmPlugin - agent selected action %i\n", action);}
 
 
-#if VELOCITY_CONTROL //DOUBT : ASK IF THIS IS DONE CORRECTLY
+#if VELOCITY_CONTROL
   // Increase or decrease the joint velocity based on whether the action is even or odd
+
 	float velocity = 0.0;
 	if(action%2 == 0)
      velocity += 0.5;
@@ -348,13 +349,13 @@ bool ArmPlugin::updateAgent()
 // update joint reference positions, returns true if positions have been modified
 bool ArmPlugin::updateJoints()
 {
-	if( testAnimation )	// test sequence
+	if( testAnimation )	//test sequence
 	{
 		const float step = (JOINT_MAX - JOINT_MIN) * (float(1.0f) / float(ANIMATION_STEPS));
 
 #if 0
-		// range of motion
-		if( animationStep < ANIMATION_STEPS )
+		 // range of motion
+    if( animationStep < ANIMATION_STEPS )
 		{
 			animationStep++;
 			printf("animation step %u\n", animationStep);
@@ -548,17 +549,14 @@ void ArmPlugin::OnUpdate(const common::UpdateInfo& updateInfo)
 		const float groundContact = 0.05f;
 
     // Checking contact between arm and ground
-		bool checkGroundContact;
-		if( strcmp(gripBBox, COLLISION_FILTER) <= groundContact )
-		  checkGroundContact = true;
-
+		bool checkGroundContact = gripBBox.min.z <= groundContact || gripBBox.max.z <= groundContact;
 
 		// Robot gets a negative reward for touching the ground
 		if(checkGroundContact)
 		{
       if(DEBUG){printf("GROUND CONTACT, EOE\n");}
 
-			rewardHistory = -1.0f;
+			rewardHistory = REWARD_LOSS;
 			newReward     = true;
 			endEpisode    = true;
 		}
@@ -566,26 +564,26 @@ void ArmPlugin::OnUpdate(const common::UpdateInfo& updateInfo)
 
 		// TODO - Issue an interim reward based on the distance to the object
 
-		/*
 		if(!checkGroundContact)
 		{
-			const float distGoal = 0; // compute the reward from distance to the goal
+			const float distGoal = BoxDistance(gripBBox, propBBox) // compute the reward from distance between gripper and the goal
 
 			if(DEBUG){printf("distance('%s', '%s') = %f\n", gripper->GetName().c_str(), prop->model->GetName().c_str(), distGoal);}
 
-
-			if( episodeFrames > 1 )
+     if( episodeFrames > 1 )
 			{
 				const float distDelta  = lastGoalDistance - distGoal;
+				const alpha = 0.09f;
 
 				// compute the smoothed moving average of the delta of the distance to the goal
-				avgGoalDelta  = 0.0;
-				rewardHistory = None;
-				newReward     = None;
+				// Q-Learning algorithm calculation of current q-value
+				avgGoalDelta  = avgGoalDelta*alpha + distDelta*(1-alpha);
+				rewardHistory = avgGoalDelta;
+				newReward     = true;
 			}
 
 			lastGoalDistance = distGoal;
-		} */
+		}
 	}
 
 	// issue rewards and train DQN
