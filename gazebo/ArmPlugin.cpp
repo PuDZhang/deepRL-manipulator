@@ -17,7 +17,7 @@
 #define JOINT_MAX	 2.0f
 
 // Turn on velocity based control
-#define VELOCITY_CONTROL true //If false then uses position based control of joint
+#define VELOCITY_CONTROL false //If false then uses position based control of joint
 #define VELOCITY_MIN -0.2f
 #define VELOCITY_MAX  0.2f
 
@@ -34,14 +34,14 @@
 
 //Hyperparameter tuning
 
-#define INPUT_WIDTH   512
-#define INPUT_HEIGHT  512
+#define INPUT_WIDTH   128
+#define INPUT_HEIGHT  128
 #define OPTIMIZER "RMSprop"
-#define LEARNING_RATE 0.1
+#define LEARNING_RATE 0.1f
 #define REPLAY_MEMORY 10000
-#define BATCH_SIZE 8
-#define USE_LSTM false
-#define LSTM_SIZE 32
+#define BATCH_SIZE 128
+#define USE_LSTM true
+#define LSTM_SIZE 128
 
 
 // TODO - Define Reward Parameters
@@ -136,7 +136,7 @@ void ArmPlugin::Load(physics::ModelPtr _parent, sdf::ElementPtr /*_sdf*/)
 	// Create our node for collision detection
 	collisionNode->Init();
 
-	// Points to the messages from the collision (my_contact) topic
+	// Subscribe to prop collision topic
   collisionSub = collisionNode->Subscribe("/gazebo/arm_world/tube/tube_link/my_contact", &ArmPlugin::onCollisionMsg, this);
 
 	// Listen to the update event. This event is broadcast every simulation iteration.
@@ -231,22 +231,26 @@ void ArmPlugin::onCollisionMsg(ConstContactsPtr &contacts)
 
 	for (unsigned int i = 0; i < contacts->contact_size(); ++i)
 	{
-		bool collisionCheck;
-		if( strcmp(contacts->contact(i).collision2().c_str(), COLLISION_ITEM) == 0 )
-		  collisionCheck = true;
-			//continue;
+		if( strcmp(contacts->contact(i).collision2().c_str(), COLLISION_FILTER) == 0 )
+			continue;
 
 		if(DEBUG){std::cout << "Collision between[" << contacts->contact(i).collision1()
 			     << "] and [" << contacts->contact(i).collision2() << "]\n";}
 
     // Check if there is collision between the arm and object, then issue learning reward
+		bool collisionCheck;
+		if( strcmp(contacts->contact(i).collision2().c_str(), COLLISION_ITEM) == 0 ) //Condition for arm touching any part of the object 
+		  collisionCheck = true;
+
     if (collisionCheck)
 		{
-			rewardHistory = REWARD_WIN;
+			if(strcmp(contacts->contact(i).collision2().c_str(), COLLISION_POINT)) //Condition for gripper touching object
+			{ rewardHistory = REWARD_WIN;
 			newReward  = true;
-			endEpisode = false;
+			endEpisode = true;
 
 			return;
+		}
 		}
 
 	}
@@ -554,14 +558,14 @@ void ArmPlugin::OnUpdate(const common::UpdateInfo& updateInfo)
 
 		if(!checkGroundContact)
 		{
-			const float distGoal = BoxDistance(gripBBox, propBBox) // compute the reward from distance between gripper and the goal
+			const float distGoal = BoxDistance(gripBBox, propBBox); // compute the reward from distance between gripper and the goal
 
 			if(DEBUG){printf("distance('%s', '%s') = %f\n", gripper->GetName().c_str(), prop->model->GetName().c_str(), distGoal);}
 
      if( episodeFrames > 1 )
 			{
 				const float distDelta  = lastGoalDistance - distGoal;
-				const alpha = 0.09f;
+				const float alpha = 0.09f;
 
 				// compute the smoothed moving average of the delta of the distance to the goal
 				// Q-Learning algorithm calculation of current q-value
