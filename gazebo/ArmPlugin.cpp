@@ -3,8 +3,6 @@
  * Modified by - Sahil Juneja, Kyle Stewart-Frantz, Vijayasri Iyer
  */
 
- //define checkGroundContact and collisionCheck
-
 #include "ArmPlugin.h"
 #include "PropPlugin.h"
 #include "deepRL.h" //Including the Deep RL framework
@@ -48,8 +46,8 @@
 
 // TODO - Define Reward Parameters
 
-#define REWARD_WIN  1.0f
-#define REWARD_LOSS -1.0f
+#define REWARD_WIN  5.0f
+#define REWARD_LOSS -5.0f
 
 // Define Object Names
 #define WORLD_NAME "arm_world"
@@ -289,12 +287,8 @@ bool ArmPlugin::updateAgent()
 
 #if VELOCITY_CONTROL
   // Increase or decrease the joint velocity based on whether the action is even or odd
-
-	float velocity = 0.0;
-	if(action%2 == 0)
-     velocity += 0.5;
-	else
-	   velocity -= 0.5;
+  float direction = (action%2 == 0) ? 1.0f: -1.0f;
+	float velocity = vel[action/2] + actionVelDelta*direction;
 
  //Making sure that the velocity is within the bounds of the defined range
  if( velocity < VELOCITY_MIN )
@@ -321,15 +315,10 @@ bool ArmPlugin::updateAgent()
 		}
 	}
 
-#else //In this script, the velocity control method is used, however the joint position control method can be used as well
-
-	// Increase or decrease the joint velocity based on whether the action is even or odd
-	float joint = 0.0;
-
-	if(action%2 == 0)
-		 joint += 0.5;
-	else
-		 joint -= 0.5;
+#else
+  // Increase or decrease the joint position based on whether the action is even or odd
+ 	float direction = (action%2 == 0) ? 1.0f: -1.0f;
+	float joint = ref[action/2] + actionJointDelta*direction;
 
 	// limit the joint to the specified range
 	if( joint < JOINT_MIN )
@@ -341,7 +330,6 @@ bool ArmPlugin::updateAgent()
 	ref[action/2] = joint;
 
 #endif
-
 	return true;
 }
 
@@ -577,7 +565,7 @@ void ArmPlugin::OnUpdate(const common::UpdateInfo& updateInfo)
 
 				// compute the smoothed moving average of the delta of the distance to the goal
 				// Q-Learning algorithm calculation of current q-value
-				avgGoalDelta  = avgGoalDelta*alpha + distDelta*(1-alpha);
+				avgGoalDelta  = (avgGoalDelta*alpha) + (distDelta*(1-alpha));
 				rewardHistory = avgGoalDelta;
 				newReward     = true;
 			}
