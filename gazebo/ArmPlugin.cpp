@@ -246,13 +246,13 @@ void ArmPlugin::onCollisionMsg(ConstContactsPtr &contacts)
 		{
 		if(strcmp(contacts->contact(i).collision2().c_str(), COLLISION_POINT)) //Condition for gripper touching object
 			rewardHistory = REWARD_WIN;
-
 		else
-			 rewardHistory = REWARD_WIN * 0.25f;
+			 rewardHistory = REWARD_WIN * 0.125f;
 
 		newReward  = true;
 		endEpisode = true;
 		return;
+	}
 	}
 }
 
@@ -610,5 +610,4 @@ void ArmPlugin::OnUpdate(const common::UpdateInfo& updateInfo)
 		}
 	}
 }
-
 }
